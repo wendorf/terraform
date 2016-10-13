@@ -514,9 +514,14 @@ func (i *Interpolater) computeResourceMultiVariable(
 		id := fmt.Sprintf("%s.%d", v.ResourceId(), j)
 
 		// If we're dealing with only a single resource, then the
-		// ID doesn't have a trailing index.
+		// ID doesn't have a trailing index. We try both here, but if a value
+		// without a trailing index is found we prefer that. This choice
+		// is for legacy reasons: older versions of TF preferred it.
 		if count == 1 {
-			id = v.ResourceId()
+			potential := v.ResourceId()
+			if _, ok := module.Resources[potential]; ok {
+				id = potential
+			}
 		}
 
 		r, ok := module.Resources[id]
