@@ -25,6 +25,10 @@ var (
 	// X_newApply will enable the new apply graph. This will be removed
 	// and be on by default in 0.8.0.
 	X_newApply = false
+
+	// X_newDestroy will enable the new destroy graph. This will be removed
+	// and be on by default in 0.8.0.
+	X_newDestroy = false
 )
 
 const (
@@ -324,16 +328,29 @@ func (c *Context) Apply() (*State, error) {
 	// our new graph builder.
 	var graph *Graph
 	var err error
-	if c.destroy || !X_newApply {
-		graph, err = c.Graph(&ContextGraphOpts{Validate: true})
+	if c.destroy {
+		if !X_newDestroy {
+			graph, err = c.Graph(&ContextGraphOpts{Validate: true})
+		} else {
+			graph, err = (&DestroyApplyGraphBuilder{
+				Module:    c.module,
+				Diff:      c.diff,
+				State:     c.state,
+				Providers: c.providersList(),
+			}).Build(RootModulePath)
+		}
 	} else {
-		graph, err = (&ApplyGraphBuilder{
-			Module:       c.module,
-			Diff:         c.diff,
-			State:        c.state,
-			Providers:    c.providersList(),
-			Provisioners: c.provisionersList(),
-		}).Build(RootModulePath)
+		if !X_newApply {
+			graph, err = c.Graph(&ContextGraphOpts{Validate: true})
+		} else {
+			graph, err = (&ApplyGraphBuilder{
+				Module:       c.module,
+				Diff:         c.diff,
+				State:        c.state,
+				Providers:    c.providersList(),
+				Provisioners: c.provisionersList(),
+			}).Build(RootModulePath)
+		}
 	}
 	if err != nil {
 		return nil, err
